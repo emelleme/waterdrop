@@ -1,0 +1,25 @@
+-- Create tables for RSVP and wristbands and bond status
+CREATE TABLE IF NOT EXISTS rsvps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS wristbands (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bond_status (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  raised REAL NOT NULL DEFAULT 0,
+  goal REAL NOT NULL DEFAULT 75000
+);
+
+-- Seed initial bond goal if table is empty
+INSERT INTO bond_status (raised, goal)
+SELECT 0, 75000
+WHERE NOT EXISTS (SELECT 1 FROM bond_status);

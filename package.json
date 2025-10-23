@@ -1,0 +1,33 @@
+{
+  "name": "waterdrop-event",
+  "version": "1.0.0",
+  "description": "Waterdrop '88 Event Management System",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:functions": "wrangler pages dev dist --local --d1=DB",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "db:create": "wrangler d1 create waterdrop-db",
+    "db:migrate": "wrangler d1 execute waterdrop-db --file=001_init.sql",
+    "db:local": "wrangler d1 execute waterdrop-db --local --file=001_init.sql"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "framer-motion": "^10.16.4",
+    "lucide-react": "^0.294.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.1.1",
+    "vite": "^4.5.0",
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
