@@ -7,8 +7,3 @@ binding = "DB"
 database_name = "waterdrop-db"
 database_id = "your-database-id-here" # Replace with actual database ID after creation
 migrations_dir = "."
-
-[env.local]
-d1_databases = [
-  { binding = "DB", database_name = "waterdrop-db", database_id = "local" }
-]
