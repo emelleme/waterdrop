@@ -4,6 +4,6 @@ pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "waterdrop-db"
-database_id = "your-database-id-here" # Replace with actual database ID after creation
+database_name = "WATERDROP"
+database_id = "58698ed1ae1f4d5a9d62d151a69d576e" # Replace with actual database ID after creation
 migrations_dir = "."
