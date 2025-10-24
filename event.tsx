@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Calendar, Clock, MapPin, Droplets, Waves, Ticket, ShieldCheck, ExternalLink, Sparkles, Music, Moon, Users, Gift, Coins, Info, PartyPopper, Trophy, RadioReceiver } from "lucide-react";
 import { motion } from "framer-motion";
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 /**
  * WATERDROP '88 — Event Page (Single File)
@@ -196,6 +198,75 @@ const schedule = [
 ];
 
 // ---------- Main Page ----------
+const modalRef = useRef<HTMLDialogElement>(null);
+
+const { publicKey, connected } = useWallet();
+
+const [showModal, setShowModal] = useState(false);
+
+const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
+
+const [name, setName] = useState('');
+
+const [email, setEmail] = useState('');
+
+useEffect(() => {
+  if (showModal) {
+    modalRef.current?.showModal();
+    setActiveTab('wallet');
+  } else {
+    modalRef.current?.close();
+  }
+}, [showModal]);
+
+async function submitRsvp() {
+  if (!connected) {
+    alert('Please connect your wallet first');
+    return;
+  }
+  try {
+    const response = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_address: publicKey.toString() }),
+    });
+    if (response.ok) {
+      alert('RSVP successful with wallet! Confirmation sent if email provided previously.');
+      setShowModal(false);
+    } else {
+      alert('RSVP failed. Please try again.');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error submitting RSVP. Please try again.');
+  }
+}
+
+async function submitRsvpEmail() {
+  if (!name || !email) {
+    alert('Please fill in your name and email');
+    return;
+  }
+  try {
+    const response = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    });
+    if (response.ok) {
+      alert('RSVP successful with email! Check your inbox for confirmation.');
+      setShowModal(false);
+      setName('');
+      setEmail('');
+    } else {
+      alert('RSVP failed. Please try again.');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error submitting RSVP. Please try again.');
+  }
+}
+
 export default function EventPage() {
   return (
     <div className="min-h-screen text-white selection:bg-fuchsia-400/30 selection:text-white">
@@ -210,9 +281,13 @@ export default function EventPage() {
             <span className="hidden sm:inline-flex items-center gap-1"><Clock className="w-4 h-4"/> 12pm → Sunset</span>
             <span className="hidden md:inline-flex items-center gap-1"><MapPin className="w-4 h-4"/> DAER Pool Club, Hollywood FL</span>
           </div>
-          <a href="https://cseas.fun/waterdrop" className="btn btn-secondary btn-sm text-[#17022b] font-bold">
-            RSVP Free <ExternalLink className="w-4 h-4"/>
-          </a>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="btn btn-secondary btn-sm text-[#17022b] font-bold"
+          >
+            RSVP Free <Ticket className="w-4 h-4"/>
+          </button>
+          <WalletMultiButton className="btn btn-primary btn-sm !text-black" />
         </div>
       </div>
 
@@ -241,9 +316,12 @@ export default function EventPage() {
                 <Pill>#100REEFS</Pill>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href="https://cseas.fun/waterdrop" className="btn btn-secondary">
+                <button 
+                  onClick={() => setShowModal(true)}
+                  className="btn btn-secondary"
+                >
                   <Ticket className="w-5 h-5"/> Reserve Free Ticket
-                </a>
+                </button>
                 <a href="#playground" className="btn btn-ghost text-cyan-200">
                   <Waves className="w-5 h-5"/> Explore Phygital Playground
                 </a>
@@ -500,9 +578,12 @@ export default function EventPage() {
             </div>
           </div>
           <div className="sm:justify-self-end">
-            <a className="btn btn-secondary" href="https://cseas.fun/waterdrop">
-              RSVP Free <ExternalLink className="w-5 h-5"/>
-            </a>
+            <button 
+              onClick={() => setShowModal(true)}
+              className="btn btn-secondary"
+            >
+              RSVP Free <Ticket className="w-5 h-5"/>
+            </button>
             <p className="text-xs text-white/60 mt-2 max-w-xs">
               By entering you agree to venue policies. We do not accept or handle wagers. Gamble responsibly.
             </p>
@@ -527,7 +608,7 @@ export default function EventPage() {
               },
               image: ['https://cseas.fun/assets/waterdrop-cover.jpg'],
               description:
-                'An 80s-themed, tech-powered, sacred-water fundraiser at DAER Pool Club. Learn-2-Earn, phygital reef game, Grandmothers’ Blessing, DJs, and Moon-Lock ceremony.',
+                'An 80s‑themed, tech‑powered, sacred‑water fundraiser at DAER Pool Club. Learn-2-Earn, phygital reef game, Grandmothers’ Blessing, DJs, and Moon-Lock ceremony.',
               organizer: {
                 '@type': 'Organization',
                 name: 'CurrentSeas • Seed 2 Sea • We Have 1 Foundation',
@@ -544,6 +625,89 @@ export default function EventPage() {
           }}
         />
       </footer>
+
+      {/* RSVP Modal */}
+      <dialog ref={modalRef} className="modal">
+        <div className="modal-box relative max-w-2xl">
+          <button 
+            className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" 
+            onClick={() => setShowModal(false)}
+          >
+            ✕
+          </button>
+          <h3 className="text-2xl font-bold text-white">RSVP to Waterdrop '88</h3>
+          <p className="text-white/80 mt-2">Reserve your free spot. Choose an option below.</p>
+          <div className="tabs tabs-boxed mt-6">
+            <button 
+              className={`tab ${activeTab === 'wallet' ? 'tab-active' : ''}`} 
+              onClick={() => setActiveTab('wallet')}
+            >
+              Connect Wallet
+            </button>
+            <button 
+              className={`tab ${activeTab === 'email' ? 'tab-active' : ''}`} 
+              onClick={() => setActiveTab('email')}
+            >
+              Use Email
+            </button>
+          </div>
+          <div className="mt-4 space-y-4">
+            {activeTab === 'wallet' ? (
+              <div>
+                <WalletMultiButton className="btn btn-primary w-full mb-4" />
+                {connected && publicKey && (
+                  <div className="alert alert-success mb-4">
+                    <span>Wallet Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}</span>
+                  </div>
+                )}
+                {!connected && (
+                  <div className="alert alert-info mb-4">
+                    <span>Connect your Solana wallet to RSVP using your address.</span>
+                  </div>
+                )}
+                <button 
+                  className="btn btn-secondary w-full" 
+                  onClick={submitRsvp}
+                  disabled={!connected}
+                >
+                  RSVP with Wallet
+                </button>
+              </div>
+            ) : (
+              <div>
+                <input 
+                  type="text" 
+                  placeholder="Full Name" 
+                  className="input input-bordered w-full" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <input 
+                  type="email" 
+                  placeholder="Email Address" 
+                  className="input input-bordered w-full" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <button 
+                  className="btn btn-secondary w-full mt-4" 
+                  onClick={submitRsvpEmail}
+                  disabled={!name || !email}
+                >
+                  RSVP with Email
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 text-xs text-white/60 text-center">
+            Your RSVP is stored securely. You'll receive a confirmation if using email.
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop" onClick={() => setShowModal(false)}>
+          <button>close</button>
+        </form>
+      </dialog>
+
     </div>
   );
 }
