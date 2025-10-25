@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Calendar, Clock, MapPin, Droplets, Waves, Ticket, ShieldCheck, ExternalLink, Sparkles, Music, Moon, Users, Gift, Coins, Info, PartyPopper, Trophy, RadioReceiver } from "lucide-react";
 import { motion } from "framer-motion";
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
+import { useWallet } from '@jup-ag/wallet-adapter';
 
 /**
  * WATERDROP '88 — Event Page (Single File)
@@ -198,76 +198,85 @@ const schedule = [
 ];
 
 // ---------- Main Page ----------
-const modalRef = useRef<HTMLDialogElement>(null);
-
-const { publicKey, connected } = useWallet();
-
-const [showModal, setShowModal] = useState(false);
-
-const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
-
-const [name, setName] = useState('');
-
-const [email, setEmail] = useState('');
-
-useEffect(() => {
-  if (showModal) {
-    modalRef.current?.showModal();
-    setActiveTab('wallet');
-  } else {
-    modalRef.current?.close();
-  }
-}, [showModal]);
-
-async function submitRsvp() {
-  if (!connected) {
-    alert('Please connect your wallet first');
-    return;
-  }
-  try {
-    const response = await fetch('/api/rsvp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet_address: publicKey.toString() }),
-    });
-    if (response.ok) {
-      alert('RSVP successful with wallet! Confirmation sent if email provided previously.');
-      setShowModal(false);
-    } else {
-      alert('RSVP failed. Please try again.');
-    }
-  } catch (error) {
-    console.error(error);
-    alert('Error submitting RSVP. Please try again.');
-  }
-}
-
-async function submitRsvpEmail() {
-  if (!name || !email) {
-    alert('Please fill in your name and email');
-    return;
-  }
-  try {
-    const response = await fetch('/api/rsvp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email }),
-    });
-    if (response.ok) {
-      alert('RSVP successful with email! Check your inbox for confirmation.');
-      setShowModal(false);
-      setName('');
-      setEmail('');
-    } else {
-      alert('RSVP failed. Please try again.');
-    }
-  } catch (error) {
-    console.error(error);
-    alert('Error submitting RSVP. Please try again.');
-  }
-}
-
 export default function EventPage() {
+  const modalRef = useRef<HTMLDialogElement>(null);
+  const { publicKey, connected } = useWallet();
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [donationAmount, setDonationAmount] = useState<number | ''>(''); // New state for donation
+
+  useEffect(() => {
+    if (showModal) {
+      modalRef.current?.showModal();
+      setActiveTab('wallet');
+    } else {
+      modalRef.current?.close();
+    }
+  }, [showModal]);
+
+  async function submitRsvp() {
+    if (!connected || !publicKey) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    const minWristbandDonation = 20;
+    const isGettingWristband = donationAmount !== '' && donationAmount >= minWristbandDonation;
+
+    try {
+      const response = await fetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          wallet_address: publicKey.toString(),
+          donation_amount: donationAmount === '' ? 0 : donationAmount,
+          get_wristband: isGettingWristband,
+        }),
+      });
+      if (response.ok) {
+        let message = 'RSVP successful with wallet!';
+        if (isGettingWristband) {
+          message += ` You've secured your phygital wristband with a $${donationAmount} donation!`;
+        }
+        message += ' Confirmation sent if email provided previously.';
+        alert(message);
+        setShowModal(false);
+        setDonationAmount(''); // Reset donation amount
+      } else {
+        alert('RSVP failed. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error submitting RSVP. Please try again.');
+    }
+  }
+
+  async function submitRsvpEmail() {
+    if (!name || !email) {
+      alert('Please fill in your name and email');
+      return;
+    }
+    try {
+      const response = await fetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      });
+      if (response.ok) {
+        alert('RSVP successful with email! Check your inbox for confirmation.');
+        setShowModal(false);
+        setName('');
+        setEmail('');
+      } else {
+        alert('RSVP failed. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error submitting RSVP. Please try again.');
+    }
+  }
   return (
     <div className="min-h-screen text-white selection:bg-fuchsia-400/30 selection:text-white">
       <NeonGrid />
@@ -276,7 +285,7 @@ export default function EventPage() {
       <div className="sticky top-0 z-40 backdrop-blur-lg bg-[#07011a]/70 border-b border-fuchsia-500/20">
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2 text-sm text-white/80">
-            <Pill>WATERDROP ’88</Pill>
+            <Pill>WATERDROP '88</Pill>
             <span className="hidden sm:inline-flex items-center gap-1"><Calendar className="w-4 h-4"/> Sat Nov 8, 2025</span>
             <span className="hidden sm:inline-flex items-center gap-1"><Clock className="w-4 h-4"/> 12pm → Sunset</span>
             <span className="hidden md:inline-flex items-center gap-1"><MapPin className="w-4 h-4"/> DAER Pool Club, Hollywood FL</span>
@@ -287,7 +296,7 @@ export default function EventPage() {
           >
             RSVP Free <Ticket className="w-4 h-4"/>
           </button>
-          <WalletMultiButton className="btn btn-primary btn-sm !text-black" />
+          <UnifiedWalletButton className="btn btn-primary btn-sm !text-black" />
         </div>
       </div>
 
@@ -549,15 +558,19 @@ export default function EventPage() {
         <div className="join join-vertical w-full">
           {[
             { q: "Is it really free?", a: "Yes. RSVP is required for entry. Optional Moonlet wristband supports the causes and speeds up gameplay." },
-            { q: "Do I need crypto?", a: "No. We’ll help you set up a wallet if you want to mint or stake. Cash/card accepted for donations & wristbands." },
-            { q: "What about gambling?", a: "Our Pick’em is free‑to‑play. We do not accept or handle wagers. Guests may use Hard Rock Bet independently if they choose." },
+            { q: "Do I need crypto?", a: "No. We'll help you set up a wallet if you want to mint or stake. Cash/card accepted for donations & wristbands." },
+            { q: "What about gambling?", a: "Our Pick'em is free‑to‑play. We do not accept or handle wagers. Guests may use Hard Rock Bet independently if they choose." },
             { q: "Is there a no‑purchase‑necessary entry?", a: "Yes. All drawings & promotions include an NPN entry method online and on site; see Official Rules." },
-            { q: "Where do donations go?", a: "Seed 2 Sea & We Have 1 Foundation (501(c)(3)), the #100REEFS artificial reef build, and Tribal Grandmothers’ language & water preservation." },
-          ].map((f) => (
+            { q: "Where do donations go?", a: "Seed 2 Sea & We Have 1 Foundation (501(c)(3)), the #100REEFS artificial reef build, and Tribal Grandmothers' language & water preservation." },
+          ].map((f, index) => (
             <div key={f.q} className="collapse collapse-arrow join-item bg-[#09021a]/70 border border-white/10">
-              <input type="checkbox" />
-              <div className="collapse-title text-md sm:text-lg font-semibold">{f.q}</div>
-              <div className="collapse-content text-white/80"><p>{f.a}</p></div>
+              <input type="checkbox" id={`faq-${index}`} />
+              <label htmlFor={`faq-${index}`} className="collapse-title text-base sm:text-lg font-semibold text-white cursor-pointer">
+                {f.q}
+              </label>
+              <div className="collapse-content text-white/80">
+                <p>{f.a}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -626,84 +639,133 @@ export default function EventPage() {
         />
       </footer>
 
-      {/* RSVP Modal */}
-      <dialog ref={modalRef} className="modal">
-        <div className="modal-box relative max-w-2xl">
-          <button 
-            className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" 
-            onClick={() => setShowModal(false)}
-          >
-            ✕
-          </button>
-          <h3 className="text-2xl font-bold text-white">RSVP to Waterdrop '88</h3>
-          <p className="text-white/80 mt-2">Reserve your free spot. Choose an option below.</p>
-          <div className="tabs tabs-boxed mt-6">
+      {/* RSVP Modal - 80s Vibe */}
+      <dialog ref={modalRef} className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box relative max-w-md sm:max-w-lg bg-gradient-to-br from-[#0d0227] via-[#12051f] to-[#1a0b2e] border-2 border-cyan-400/40 shadow-[0_0_40px_rgba(34,211,238,0.3)]">
+          {/* Retro header with gradient */}
+          <div className="bg-gradient-to-r from-cyan-500/20 via-fuchsia-500/20 to-purple-500/20 p-4 -mx-4 -mt-4 mb-4 border-b border-cyan-400/30">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]">
+                RSVP TO WATERDROP '88
+              </h3>
+              <button 
+                className="btn btn-sm btn-circle btn-ghost text-white hover:bg-fuchsia-500/30" 
+                onClick={() => setShowModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-cyan-200/90 text-sm mt-1">Reserve your free spot • Choose your method</p>
+          </div>
+
+          {/* Retro tabs */}
+          <div className="tabs tabs-boxed bg-[#09021a]/60 border border-cyan-400/20 mb-6">
             <button 
-              className={`tab ${activeTab === 'wallet' ? 'tab-active' : ''}`} 
+              className={`tab flex-1 ${activeTab === 'wallet' ? 'tab-active bg-gradient-to-r from-cyan-500/30 to-fuchsia-500/30 text-white' : 'text-white/70'}`} 
               onClick={() => setActiveTab('wallet')}
             >
-              Connect Wallet
+              <Sparkles className="w-4 h-4 mr-2" /> Wallet
             </button>
             <button 
-              className={`tab ${activeTab === 'email' ? 'tab-active' : ''}`} 
+              className={`tab flex-1 ${activeTab === 'email' ? 'tab-active bg-gradient-to-r from-cyan-500/30 to-fuchsia-500/30 text-white' : 'text-white/70'}`} 
               onClick={() => setActiveTab('email')}
             >
-              Use Email
+              <Ticket className="w-4 h-4 mr-2" /> Email
             </button>
           </div>
-          <div className="mt-4 space-y-4">
+
+          {/* Content area */}
+          <div className="space-y-4">
             {activeTab === 'wallet' ? (
-              <div>
-                <WalletMultiButton className="btn btn-primary w-full mb-4" />
+              <div className="space-y-4">
+                {/* Wallet connection section */}
+                <div className="bg-[#0a021d]/50 border border-cyan-400/20 rounded-xl p-4">
+                  <UnifiedWalletButton 
+                    buttonClassName="btn btn-primary w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 border-0 text-white font-bold hover:shadow-[0_0_20px_rgba(34,211,238,0.5)]" 
+                  />
+                </div>
+                
+                {/* Connection status */}
                 {connected && publicKey && (
-                  <div className="alert alert-success mb-4">
-                    <span>Wallet Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}</span>
+                  <div className="alert alert-success bg-green-500/20 border-green-400/30 text-green-200">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}</span>
                   </div>
                 )}
                 {!connected && (
-                  <div className="alert alert-info mb-4">
-                    <span>Connect your Solana wallet to RSVP using your address.</span>
+                  <div className="alert alert-info bg-cyan-500/20 border-cyan-400/30 text-cyan-200">
+                    <Info className="w-4 h-4" />
+                    <span>Connect your wallet to RSVP and donate for a phygital wristband.</span>
                   </div>
                 )}
+
+                {/* RSVP button */}
+                {/* Donation input */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text text-white/80">Donation Amount (USD)</span>
+                    <span className="label-text-alt text-cyan-200">Min $20 for Phygital Wristband</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="input input-bordered w-full bg-[#0a021d]/50 border-cyan-400/30 text-white placeholder-white/50 focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)]" 
+                    value={donationAmount === '' ? '' : donationAmount}
+                    onChange={(e) => setDonationAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    min="0"
+                  />
+                </div>
+
                 <button 
-                  className="btn btn-secondary w-full" 
+                  className="btn btn-secondary w-full bg-gradient-to-r from-fuchsia-500 to-purple-500 border-0 text-white font-bold hover:shadow-[0_0_20px_rgba(244,114,182,0.5)] disabled:opacity-50" 
                   onClick={submitRsvp}
-                  disabled={!connected}
+                  disabled={!connected || (donationAmount !== '' && donationAmount < 0)}
                 >
-                  RSVP with Wallet
+                  <Ticket className="w-5 h-5 mr-2" /> RSVP & Donate
                 </button>
               </div>
             ) : (
-              <div>
-                <input 
-                  type="text" 
-                  placeholder="Full Name" 
-                  className="input input-bordered w-full" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <input 
-                  type="email" 
-                  placeholder="Email Address" 
-                  className="input input-bordered w-full" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+              <div className="space-y-4">
+                {/* Email form */}
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="Full Name" 
+                    className="input input-bordered w-full bg-[#0a021d]/50 border-cyan-400/30 text-white placeholder-white/50 focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)]" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <input 
+                    type="email" 
+                    placeholder="Email Address" 
+                    className="input input-bordered w-full bg-[#0a021d]/50 border-cyan-400/30 text-white placeholder-white/50 focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)]" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                
+                {/* RSVP button */}
                 <button 
-                  className="btn btn-secondary w-full mt-4" 
+                  className="btn btn-secondary w-full bg-gradient-to-r from-fuchsia-500 to-purple-500 border-0 text-white font-bold hover:shadow-[0_0_20px_rgba(244,114,182,0.5)] disabled:opacity-50" 
                   onClick={submitRsvpEmail}
                   disabled={!name || !email}
                 >
-                  RSVP with Email
+                  <Ticket className="w-5 h-5 mr-2" /> RSVP with Email
                 </button>
               </div>
             )}
           </div>
-          <div className="mt-6 text-xs text-white/60 text-center">
-            Your RSVP is stored securely. You'll receive a confirmation if using email.
+
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t border-cyan-400/20">
+            <p className="text-xs text-cyan-200/70 text-center">
+              Your RSVP is stored securely • Confirmation sent via email
+            </p>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop" onClick={() => setShowModal(false)}>
+        
+        {/* Backdrop */}
+        <form method="dialog" className="modal-backdrop bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)}>
           <button>close</button>
         </form>
       </dialog>

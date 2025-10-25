@@ -14,6 +14,12 @@
     "db:local": "wrangler d1 execute waterdrop-db --local --file=001_init.sql"
   },
   "dependencies": {
+    "@jup-ag/jup-mobile-adapter": "^0.0.2",
+    "@jup-ag/react-hook": "^6.2.0",
+    "@jup-ag/wallet-adapter": "^0.2.5",
+    "@reown/appkit": "^1.8.11",
+    "@reown/appkit-adapter-solana": "^1.8.11",
+    "@reown/appkit-wallet-button": "^1.8.11",
     "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
