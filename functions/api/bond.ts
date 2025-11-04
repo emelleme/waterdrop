@@ -3,14 +3,14 @@ import { Env } from '@cloudflare/workers-types';
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { env } = context;
-    // Table `bond_status` has columns: raised REAL, goal REAL (single row)
+    // Table `bond_status` has columns: raised REAL, goal REAL, donors INTEGER (single row)
     const result = await env.DB.prepare(
-      'SELECT raised, goal FROM bond_status LIMIT 1'
+      'SELECT raised, goal, donors FROM bond_status LIMIT 1'
     ).first();
     if (!result) {
       // default values if none set
       return new Response(
-        JSON.stringify({ raised: 0, goal: 75000 }),
+        JSON.stringify({ raised: 0, goal: 75000, donors: 0 }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     });
   } catch (err) {
     return new Response(
-      JSON.stringify({ raised: 0, goal: 75000 }),
+      JSON.stringify({ raised: 0, goal: 75000, donors: 0 }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }

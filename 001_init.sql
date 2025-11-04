@@ -16,10 +16,11 @@ CREATE TABLE IF NOT EXISTS wristbands (
 CREATE TABLE IF NOT EXISTS bond_status (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   raised REAL NOT NULL DEFAULT 0,
-  goal REAL NOT NULL DEFAULT 75000
+  goal REAL NOT NULL DEFAULT 75000,
+  donors INTEGER NOT NULL DEFAULT 0
 );
 
 -- Seed initial bond goal if table is empty
-INSERT INTO bond_status (raised, goal)
-SELECT 0, 75000
+INSERT INTO bond_status (raised, goal, donors)
+SELECT 0, 75000, 0
 WHERE NOT EXISTS (SELECT 1 FROM bond_status);
