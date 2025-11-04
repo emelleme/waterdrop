@@ -11,6 +11,7 @@
     "deploy": "npm run build && wrangler pages deploy dist",
     "db:create": "wrangler d1 create waterdrop-db",
     "db:migrate": "wrangler d1 execute waterdrop-db --file=001_init.sql",
+    "db:local": "wrangler d1 execute waterdrop-db --local --file=001_init.sql",
     "db:local": "wrangler d1 execute waterdrop-db --local --file=001_init.sql"
   },
   "dependencies": {
