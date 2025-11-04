@@ -277,8 +277,7 @@ const schedule = [
   { t: "1:00", label: "Pick'em Lounge (Free‑to‑Play) opens", icon: Trophy },
   { t: "2:00", label: "Structured‑Water tastings & vendor village", icon: Droplets },
   { t: "3:00", label: "Raffle & Guardians of the Reef staking push", icon: Gift },
-  { t: "6:00", label: "Grandmothers' Water Blessing → First Reef Bloom", icon: Moon },
-  { t: "9:36", label: "Moon‑Lock ceremony (on‑chain visual)", icon: Moon },
+  { t: "5:00-6:00", label: "Grandmothers' Water Blessing → First Reef Bloom", icon: Moon },
 ];
 
 // ---------- Main Page ----------
