@@ -3,6 +3,7 @@ import { Calendar, Clock, MapPin, Droplets, Waves, Ticket, ShieldCheck, External
 import { motion } from "framer-motion";
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
+import tribalImage from './src/assets/tribal.jpg';
 
 /**
  * WATERDROP '88 — Event Page (Data-Driven)
@@ -627,9 +628,9 @@ export default function EventPage() {
             <div className="md:justify-self-end space-y-4">
               {/* Tribal Grandmothers Image */}
               <div className="relative">
-                <img 
-                  src="./src/assets/tribal.jpg" 
-                  alt="Tribal Grandmothers" 
+                <img
+                  src={tribalImage}
+                  alt="Tribal Grandmothers"
                   className="w-full max-w-sm mx-auto rounded-2xl border border-emerald-500/30 shadow-[0_0_30px_rgba(34,211,238,0.25)]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#07011a]/60 via-transparent to-transparent rounded-2xl"></div>

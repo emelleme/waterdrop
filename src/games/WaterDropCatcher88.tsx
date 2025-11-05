@@ -52,6 +52,7 @@ const WaterDropCatcher88: React.FC = () => {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [isMuted, setIsMuted] = useState(false);
+  const [gyroPermission, setGyroPermission] = useState<'granted' | 'denied' | 'pending'>('pending');
 
   // Game constants
   const CANVAS_WIDTH = 800;
@@ -60,16 +61,28 @@ const WaterDropCatcher88: React.FC = () => {
   const TERMINAL_VELOCITY = 8;
   const DROP_SPAWN_RATE = 0.02;
 
-  // Device orientation for tilt controls
-  useEffect(() => {
-    if (window.DeviceOrientationEvent) {
-      // iOS 13+ permission request
-      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-        (DeviceOrientationEvent as any).requestPermission();
+  // Request gyro permission for iOS devices
+  const requestGyroPermission = useCallback(async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const permission = await (DeviceOrientationEvent as any).requestPermission();
+        setGyroPermission(permission);
+        if (permission === 'granted') {
+          enableTiltControls();
+        }
+      } catch (error) {
+        console.error('Error requesting gyro permission:', error);
+        setGyroPermission('denied');
       }
-      enableTiltControls();
     }
   }, []);
+
+  // Device orientation for tilt controls
+  useEffect(() => {
+    if (window.DeviceOrientationEvent && gyroPermission === 'granted') {
+      enableTiltControls();
+    }
+  }, [gyroPermission]);
 
   const enableTiltControls = useCallback(() => {
     window.addEventListener('deviceorientation', (event) => {
@@ -80,6 +93,75 @@ const WaterDropCatcher88: React.FC = () => {
         setBucket(prev => ({ ...prev, x: Math.max(30, Math.min(CANVAS_WIDTH - 30, newX)) }));
       }
     });
+  }, [gameState.isPlaying, gameState.isPaused]);
+
+  // Mouse controls
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!gameState.isPlaying || gameState.isPaused) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      
+      const mouseX = (event.clientX - rect.left) * scaleX;
+      const newX = Math.max(30, Math.min(CANVAS_WIDTH - 30, mouseX));
+      
+      setBucket(prev => ({ ...prev, x: newX }));
+    };
+
+    const handleMouseClick = (event: MouseEvent) => {
+      if (!gameState.isPlaying) {
+        startGame();
+      }
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('click', handleMouseClick);
+    
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('click', handleMouseClick);
+    };
+  }, [gameState.isPlaying, gameState.isPaused]);
+
+  // Touch controls for mobile
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchMove = (event: TouchEvent) => {
+      event.preventDefault();
+      if (!gameState.isPlaying || gameState.isPaused) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      
+      const touch = event.touches[0];
+      const touchX = (touch.clientX - rect.left) * scaleX;
+      const newX = Math.max(30, Math.min(CANVAS_WIDTH - 30, touchX));
+      
+      setBucket(prev => ({ ...prev, x: newX }));
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      event.preventDefault();
+      if (!gameState.isPlaying) {
+        startGame();
+      }
+    };
+
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    
+    return () => {
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+    };
   }, [gameState.isPlaying, gameState.isPaused]);
 
   // Keyboard controls
@@ -399,7 +481,7 @@ const WaterDropCatcher88: React.FC = () => {
         ref={canvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        className="absolute top-0 left-0 w-full h-full"
+        className="absolute top-0 left-0 w-full h-full cursor-crosshair"
         style={{ imageRendering: 'pixelated' }}
       />
       
