@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import EventPage from '../event.tsx'; // Main event page
 import GamePage from '../game.tsx'; // Game page
+import ResiliencePools from './ResiliencePools'; // Resilience Pools page
+import InitiativeCreationGuide from './InitiativeCreationGuide'; // Initiative creation documentation
 
 // Import the UnifiedWalletProvider from the Jupiter Aggregator wallet adapter
 import { UnifiedWalletProvider } from "@jup-ag/wallet-adapter";
@@ -54,43 +56,43 @@ const App = () => {
         hardcodedWallets: [
           // Phantom Wallet configuration
           {
-            id: "Phantom" as WalletName,
-            name: "Phantom" as WalletName,
+            id: "Phantom" as any,
+            name: "Phantom" as any,
             url: "https://phantom.app/",
             icon: "https://phantom.app/ul/v10/icons/phantom.svg",
           },
           // Solflare Wallet configuration (icon field omitted as requested)
           {
-            id: "Solflare" as WalletName,
-            name: "Solflare" as WalletName,
+            id: "Solflare" as any,
+            name: "Solflare" as any,
             url: "https://solflare.com/",
             icon: "https://solflare.com/favicon.ico",
           },
           // Backpack Wallet configuration (icon field omitted as requested)
           {
-            id: "Backpack" as WalletName,
-            name: "Backpack" as WalletName,
+            id: "Backpack" as any,
+            name: "Backpack" as any,
             url: "https://www.backpack.app/",
             icon: "https://www.backpack.app/favicon.ico",
           },
           // Magic Eden Wallet configuration (icon field omitted as requested)
           {
-            id: "Magic Eden" as WalletName,
-            name: "Magic Eden" as WalletName,
+            id: "Magic Eden" as any,
+            name: "Magic Eden" as any,
             url: "https://wallet.magiceden.io/",
             icon: "https://wallet.magiceden.io/favicon.ico",
           },
           // Coinbase Wallet configuration (icon field omitted as requested)
           {
-            id: "Coinbase Wallet" as WalletName,
-            name: "Coinbase Wallet" as WalletName,
+            id: "Coinbase Wallet" as any,
+            name: "Coinbase Wallet" as any,
             url: "https://www.coinbase.com/wallet",
             icon: "https://www.coinbase.com/wallet/favicon.ico",
           },
           // OKX Wallet configuration (icon field omitted as requested)
           {
-            id: "OKX Wallet" as WalletName,
-            name: "OKX Wallet" as WalletName,
+            id: "OKX Wallet" as any,
+            name: "OKX Wallet" as any,
             url: "https://www.okx.com/web3",
             icon: "https://www.okx.com/web3/favicon.ico",
           },
@@ -103,7 +105,10 @@ const App = () => {
       }}
     >
       {/* Simple routing */}
-      {route === '/game' || route === '/#/game' ? <GamePage /> : <EventPage />}
+      {route === '/game' || route === '/#/game' ? <GamePage /> : 
+       route === '/resilience-pools' || route === '/#/resilience-pools' ? <ResiliencePools /> : 
+       route === '/initiative-guide' || route === '/#/initiative-guide' ? <InitiativeCreationGuide /> :
+       <EventPage />}
     </UnifiedWalletProvider>
   );
 };
