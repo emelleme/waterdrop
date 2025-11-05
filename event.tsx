@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Calendar, Clock, MapPin, Droplets, Waves, Ticket, ShieldCheck, ExternalLink, Sparkles, Music, Moon, Users, Gift, Coins, Info, PartyPopper, Trophy, RadioReceiver, Heart, Zap, Globe, Star } from "lucide-react";
+import { Calendar, Clock, MapPin, Droplets, Waves, Ticket, ShieldCheck, ExternalLink, Sparkles, Music, Moon, Users, Gift, Coins, Info, PartyPopper, Trophy, RadioReceiver, Heart, Zap, Globe, Star, Loader2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 
 /**
- * WATERDROP '88 — Event Page (Single File)
+ * WATERDROP '88 — Event Page (Data-Driven)
  * Mobile-first, Tailwind + DaisyUI. Neon 80s aesthetic.
  * Focus: Tribal Grandmothers' Blessings & Hurricane Melissa Relief
+ * ALL DATA COMES FROM API - NO FAKE DATA
  */
 
 // ---------- Shared visual bits ----------
@@ -80,36 +81,205 @@ const NeonGrid = () => (
   </div>
 );
 
-// ---------- Relief Fund Tracker ----------
-// This is a placeholder for actual API integration
-// In a real implementation, this would fetch data from your backend
+// ---------- Loading Components ----------
+const LoadingCard = ({ title }: { title: string }) => (
+  <div className="card bg-[#0b0220]/70 border border-white/10">
+    <div className="card-body items-center text-center">
+      <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      <p className="text-white/70 mt-2">Loading {title}...</p>
+    </div>
+  </div>
+);
+
+const EmptyState = ({ title, message }: { title: string; message: string }) => (
+  <div className="card bg-[#0b0220]/70 border border-white/10">
+    <div className="card-body items-center text-center">
+      <AlertCircle className="w-8 h-8 text-amber-400" />
+      <p className="text-white/70 mt-2">{message}</p>
+      <p className="text-xs text-white/50 mt-1">No {title} available yet</p>
+    </div>
+  </div>
+);
+
+// ---------- Data Types ----------
+interface EventStats {
+  rsvpCount: number;
+  totalDonations: number;
+  donorCount: number;
+  verifiedOrgs: number;
+  reefsBuilt: number;
+  reefGoal: number;
+  blessingTime: string;
+  eventDate: string;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  focus_area: string;
+  website?: string;
+  contact_email?: string;
+  wallet_address?: string;
+  status: 'pending' | 'verified' | 'rejected';
+  impact_description?: string;
+  proof_links?: string;
+  created_at: string;
+}
+
+interface BondData {
+  raised: number;
+  goal: number;
+  donors: number;
+}
+
+// ---------- Data Hooks ----------
+function useEventStats() {
+  const [stats, setStats] = useState<EventStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/stats');
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const data = await response.json();
+        setStats(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { stats, loading, error };
+}
+
+function useOrganizations() {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchOrganizations() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/organizations?status=verified');
+        if (!response.ok) throw new Error('Failed to fetch organizations');
+        const data = await response.json();
+        setOrganizations(data.organizations || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchOrganizations();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchOrganizations, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { organizations, loading, error };
+}
+
+function useBondData() {
+  const [bondData, setBondData] = useState<BondData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchBondData() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/bond');
+        if (!response.ok) throw new Error('Failed to fetch bond data');
+        const data = await response.json();
+        setBondData(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBondData();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchBondData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { bondData, loading, error };
+}
+
+// ---------- Data Components ----------
 function ReliefTracker() {
-  // These would be fetched from your API in a real implementation
-  const reliefData = {
-    raised: 75000, // Real data value
-    goal: 100000,
-    donors: 342,   // Real data value
-    organizations: 3 // Real data value
+  const { stats, loading, error } = useEventStats();
+  const { bondData } = useBondData();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <LoadingCard key={i} title="stats" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card bg-[#0b0220]/70 border border-red-500/30">
+        <div className="card-body items-center text-center">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-red-200 mt-2">Failed to load relief data</p>
+          <p className="text-xs text-white/50 mt-1">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return <EmptyState title="relief data" message="No relief data available" />;
+  }
+
+  const displayData = bondData ? {
+    raised: bondData.raised,
+    goal: bondData.goal,
+    donors: bondData.donors,
+    organizations: stats.verifiedOrgs
+  } : {
+    raised: stats.totalDonations,
+    goal: 150000, // Default goal if no bond data
+    donors: stats.donorCount,
+    organizations: stats.verifiedOrgs
   };
 
-  const { raised, goal, donors, organizations } = reliefData;
-  const pct = Math.min(100, (raised / goal) * 100);
+  const pct = Math.min(100, (displayData.raised / displayData.goal) * 100);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
       <div className="stat bg-[#0d0227]/60 border border-fuchsia-500/30 rounded-2xl">
         <div className="stat-title text-fuchsia-200">Relief Raised</div>
-        <div className="stat-value text-2xl text-fuchsia-200">${raised.toLocaleString()}</div>
-        <div className="stat-desc text-white/70">of ${goal.toLocaleString()} goal</div>
+        <div className="stat-value text-2xl text-fuchsia-200">${displayData.raised.toLocaleString()}</div>
+        <div className="stat-desc text-white/70">of ${displayData.goal.toLocaleString()} goal</div>
       </div>
       <div className="stat bg-[#0d0227]/60 border border-cyan-500/30 rounded-2xl">
         <div className="stat-title text-cyan-200">Relief Guardians</div>
-        <div className="stat-value text-2xl text-cyan-200">{donors}</div>
+        <div className="stat-value text-2xl text-cyan-200">{displayData.donors}</div>
         <div className="stat-desc text-white/70">supporting Jamaica</div>
       </div>
       <div className="stat bg-[#0d0227]/60 border border-emerald-500/30 rounded-2xl">
         <div className="stat-title text-emerald-200">Verified Orgs</div>
-        <div className="stat-value text-2xl text-emerald-200">{organizations}</div>
+        <div className="stat-value text-2xl text-emerald-200">{displayData.organizations}</div>
         <div className="stat-desc text-white/70">on the ground</div>
       </div>
       <div className="stat bg-[#0d0227]/60 border border-amber-500/30 rounded-2xl">
@@ -121,32 +291,8 @@ function ReliefTracker() {
   );
 }
 
-// ---------- Jamaica Relief Network Component ----------
 function JamaicaReliefNetwork() {
-  const [organizations, setOrganizations] = useState([
-    {
-      name: "Jamaica Disaster Relief Foundation",
-      focus: "Emergency Shelter & Food",
-      status: "verified",
-      wallet: "JD1...xyz",
-      impact: "2,500 families served"
-    },
-    {
-      name: "Caribbean Climate Resilience Initiative",
-      focus: "Infrastructure Rebuilding",
-      status: "verified", 
-      wallet: "CC2...abc",
-      impact: "15 communities restored"
-    },
-    {
-      name: "Jamaica Healthcare Collective",
-      focus: "Medical Aid & Supplies",
-      status: "verified",
-      wallet: "JH3...def",
-      impact: "8 clinics supported"
-    }
-  ]);
-
+  const { organizations, loading, error } = useOrganizations();
   const [showSubmission, setShowSubmission] = useState(false);
   const [submission, setSubmission] = useState({
     name: "",
@@ -156,12 +302,32 @@ function JamaicaReliefNetwork() {
     proof: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle organization submission
-    alert("Organization submitted for verification! We'll review within 24 hours.");
-    setShowSubmission(false);
-    setSubmission({ name: "", website: "", focus: "", contact: "", proof: "" });
+    try {
+      const response = await fetch('/api/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: submission.name,
+          focus_area: submission.focus,
+          website: submission.website,
+          contact_email: submission.contact,
+          proof_links: submission.proof
+        }),
+      });
+      
+      if (response.ok) {
+        alert("Organization submitted for verification! We'll review within 24 hours.");
+        setShowSubmission(false);
+        setSubmission({ name: "", website: "", focus: "", contact: "", proof: "" });
+      } else {
+        alert('Failed to submit organization. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error submitting organization. Please try again.');
+    }
   };
 
   return (
@@ -169,29 +335,47 @@ function JamaicaReliefNetwork() {
       {/* Featured Organizations */}
       <div>
         <h3 className="text-2xl font-bold text-white mb-6">Verified Organizations</h3>
-        <div className="grid md:grid-cols-3 gap-6">
-          {organizations.map((org, index) => (
-            <div key={index} className="card bg-[#0b0220]/70 border border-white/10 hover:border-emerald-400/40">
-              <div className="card-body">
-                <h4 className="text-lg font-bold text-emerald-200 mb-3">{org.name}</h4>
-                <div className="space-y-3">
-                  <div className="p-3 bg-[#0b0220]/70 rounded-lg border border-emerald-400/20">
-                    <p className="text-white/80 text-sm">{org.focus}</p>
+        {loading ? (
+          <div className="grid md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <LoadingCard key={i} title="organizations" />
+            ))}
+          </div>
+        ) : error ? (
+          <EmptyState title="organizations" message="Failed to load organizations" />
+        ) : organizations.length === 0 ? (
+          <EmptyState title="verified organizations" message="No verified organizations yet" />
+        ) : (
+          <div className="grid md:grid-cols-3 gap-6">
+            {organizations.map((org) => (
+              <div key={org.id} className="card bg-[#0b0220]/70 border border-white/10 hover:border-emerald-400/40">
+                <div className="card-body">
+                  <h4 className="text-lg font-bold text-emerald-200 mb-3">{org.name}</h4>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-[#0b0220]/70 rounded-lg border border-emerald-400/20">
+                      <p className="text-white/80 text-sm">{org.focus_area}</p>
+                    </div>
+                    {org.impact_description && (
+                      <div className="p-3 bg-[#0b0220]/70 rounded-lg border border-emerald-400/20">
+                        <p className="text-emerald-300 text-sm">{org.impact_description}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="p-3 bg-[#0b0220]/70 rounded-lg border border-emerald-400/20">
-                    <p className="text-emerald-300 text-sm">{org.impact}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    {org.wallet_address && (
+                      <span className="text-xs text-white/60 font-mono">
+                        {org.wallet_address.slice(0, 12)}...
+                      </span>
+                    )}
+                    <button className="btn btn-ghost btn-sm text-emerald-200 hover:text-emerald-100">
+                      <Coins className="w-3 h-3 mr-1" /> Claim $💧
+                    </button>
                   </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-white/60 font-mono">{org.wallet}</span>
-                  <button className="btn btn-ghost btn-sm text-emerald-200 hover:text-emerald-100">
-                    <Coins className="w-3 h-3 mr-1" /> Claim $💧
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Submit Organization */}
@@ -272,28 +456,26 @@ function JamaicaReliefNetwork() {
 // ---------- Timeline data ----------
 const schedule = [
   { t: "12:00", label: "Doors open • Neon check-in & wallet desk", icon: PartyPopper },
+  { t: "12:15", label: "Opening Ceremony & Prayer", icon: Heart },
   { t: "12:30", label: "Learn‑2‑Earn AR Reef Hunt goes live", icon: RadioReceiver },
   { t: "1:00", label: "Pick'em Lounge (Free‑to‑Play) opens", icon: Trophy },
   { t: "2:00", label: "Structured‑Water tastings & vendor village", icon: Droplets },
   { t: "3:00", label: "Rooftop yoga & sound‑healing pulses (hourly)", icon: Waves },
+  { t: "5:00", label: "Raffle & Guardians of the Reef staking push", icon: Gift },
   { t: "5:30–6:00", label: "Grandmothers' Water Blessing → First Reef Bloom", icon: Moon },
-  { t: "7:00", label: "Raffle & Guardians of the Reef staking push", icon: Gift },
   { t: "9:36", label: "Moon‑Lock ceremony (on‑chain visual)", icon: Moon },
 ];
 
 // ---------- Main Page ----------
 export default function EventPage() {
   const modalRef = useRef<HTMLDialogElement>(null);
-  const wristbandModalRef = useRef<HTMLDialogElement>(null);
   const { wallet, connected, publicKey, connect, disconnect } = useUnifiedWallet();
 
   const [showModal, setShowModal] = useState(false);
-  const [wristbandModal, setWristbandModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [donationAmount, setDonationAmount] = useState<number | ''>('');
-  const [wristbandQuantity, setWristbandQuantity] = useState(1);
 
   useEffect(() => {
     if (showModal) {
@@ -304,23 +486,11 @@ export default function EventPage() {
     }
   }, [showModal]);
 
-  useEffect(() => {
-    if (wristbandModal) {
-      wristbandModalRef.current?.showModal();
-      setActiveTab('wallet');
-    } else {
-      wristbandModalRef.current?.close();
-    }
-  }, [wristbandModal]);
-
   async function submitRsvp() {
     if (!connected || !publicKey) {
       alert('Please connect your wallet first');
       return;
     }
-
-    const minWristbandDonation = 20;
-    const isGettingWristband = donationAmount !== '' && donationAmount >= minWristbandDonation;
 
     try {
       const response = await fetch('/api/rsvp', {
@@ -329,15 +499,13 @@ export default function EventPage() {
         body: JSON.stringify({ 
           wallet_address: publicKey.toString(),
           donation_amount: donationAmount === '' ? 0 : donationAmount,
-          get_wristband: isGettingWristband,
         }),
       });
       if (response.ok) {
         let message = 'RSVP successful with wallet!';
-        if (isGettingWristband) {
+        if (donationAmount && donationAmount >= 20) {
           message += ` You've secured your phygital wristband with a $${donationAmount} donation!`;
         }
-        message += ' Confirmation sent if email provided previously.';
         alert(message);
         setShowModal(false);
         setDonationAmount('');
@@ -375,6 +543,8 @@ export default function EventPage() {
     }
   }
 
+  const { stats } = useEventStats();
+
   return (
     <div className="min-h-screen text-white selection:bg-fuchsia-400/30 selection:text-white">
       <NeonGrid />
@@ -384,7 +554,7 @@ export default function EventPage() {
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2 text-sm text-white/80">
             <Pill>WATERDROP '88</Pill>
-            <span className="hidden sm:inline-flex items-center gap-1"><Calendar className="w-4 h-4"/> Sat Nov 8, 2025</span>
+            <span className="hidden sm:inline-flex items-center gap-1"><Calendar className="w-4 h-4"/> {stats?.eventDate || 'Sat Nov 8, 2025'}</span>
             <span className="hidden sm:inline-flex items-center gap-1"><Clock className="w-4 h-4"/> 12pm → Sunset</span>
             <span className="hidden md:inline-flex items-center gap-1"><MapPin className="w-4 h-4"/> DAER Pool Club, Hollywood FL</span>
           </div>
@@ -439,6 +609,7 @@ export default function EventPage() {
                 <Pill>21+ • Valid ID</Pill>
                 <Pill>Hurricane Melissa Relief</Pill>
                 <Pill>#100REEFS</Pill>
+                <Pill>Live Data</Pill>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button 
@@ -457,7 +628,7 @@ export default function EventPage() {
               {/* Tribal Grandmothers Image */}
               <div className="relative">
                 <img 
-                  src="/src/assets/tribal.jpg" 
+                  src="./src/assets/tribal.jpg" 
                   alt="Tribal Grandmothers" 
                   className="w-full max-w-sm mx-auto rounded-2xl border border-emerald-500/30 shadow-[0_0_30px_rgba(34,211,238,0.25)]"
                 />
@@ -466,8 +637,9 @@ export default function EventPage() {
               
               {/* Event Date and Time */}
               <div className="bg-[#0d0227]/60 border border-fuchsia-500/30 rounded-2xl p-4 text-center text-white/70">
-                <p className="text-3xl font-extrabold text-white drop-shadow-[0_0_8px_rgba(236,72,153,0.55)]">Sat Nov 8, 2025</p>
+                <p className="text-3xl font-extrabold text-white drop-shadow-[0_0_8px_rgba(236,72,153,0.55)]">{stats?.eventDate || 'Sat Nov 8, 2025'}</p>
                 <p className="text-2xl font-bold text-white/90">12pm → Sunset</p>
+                <p className="text-sm text-emerald-200 mt-2">⏰ {stats?.blessingTime || '5:30–6:00 PM'} Grandmothers' Blessing</p>
               </div>
             </div>
           </div>
@@ -475,11 +647,11 @@ export default function EventPage() {
       </header>
 
       {/* Relief Fund Tracker */}
-      <Section id="relief-tracker" title="Hurricane Melissa Relief Fund" subtitle="Real-time tracking of community support for Jamaica">
+      <Section id="relief-tracker" title="Hurricane Melissa Relief Fund" subtitle="Real-time data from our API">
         <ReliefTracker />
       </Section>
 
-      {/* #100Reefs Challenge - Moved to top priority */}
+      {/* #100Reefs Challenge */}
       <Section id="reefs" title="#100Reefs Challenge" subtitle="Building resilient reefs for future storm protection">
         <div className="grid md:grid-cols-3 gap-6">
           {[
@@ -494,45 +666,6 @@ export default function EventPage() {
               </div>
             </motion.div>
           ))}
-        </div>
-
-        <div className="mt-8 card bg-[#0b0220]/70 border border-emerald-400/30">
-          <div className="card-body">
-            <h3 className="card-title text-emerald-200">
-              <Coins className="w-5 h-5" /> Relief & Reef Connection
-            </h3>
-            <p className="text-white/90 text-lg leading-relaxed mb-4">
-              Hurricane Melissa relief efforts are directly connected to reef building. As we support immediate recovery, we're also investing in long-term resilience through the #100Reefs challenge.
-            </p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[#0a021d]/50 rounded-lg border border-emerald-400/20">
-                <h4 className="text-emerald-200 font-semibold mb-2">Immediate Relief</h4>
-                <ul className="text-white/80 text-sm space-y-1">
-                  <li>• Emergency shelter and food</li>
-                  <li>• Medical supplies and aid</li>
-                  <li>• Infrastructure rebuilding</li>
-                  <li>• Community support services</li>
-                </ul>
-              </div>
-              <div className="p-4 bg-[#0a021d]/50 rounded-lg border border-emerald-400/20">
-                <h4 className="text-emerald-200 font-semibold mb-2">Long-term Resilience</h4>
-                <ul className="text-white/80 text-sm space-y-1">
-                  <li>• Artificial reef construction</li>
-                  <li>• Coastal protection systems</li>
-                  <li>• Marine ecosystem restoration</li>
-                  <li>• Climate adaptation infrastructure</li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-6 text-center">
-              <button 
-                onClick={() => setShowModal(true)}
-                className="btn btn-primary btn-lg bg-gradient-to-r from-emerald-500 to-cyan-500 border-0 text-white font-bold hover:shadow-[0_0_20px_rgba(34,211,238,0.5)]"
-              >
-                <Heart className="w-5 h-5 mr-2" /> Join the #100Reefs Challenge
-              </button>
-            </div>
-          </div>
         </div>
       </Section>
 
@@ -587,6 +720,7 @@ export default function EventPage() {
                     <span>Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}</span>
                   </div>
                 )}
+                
                 {!connected && (
                   <div className="alert alert-info bg-emerald-500/20 border-emerald-400/30 text-emerald-200">
                     <Heart className="w-4 h-4" />
@@ -659,7 +793,7 @@ export default function EventPage() {
         </form>
       </dialog>
 
-      {/* Tribal Grandmothers' Blessing - Moved to top priority */}
+      {/* Tribal Grandmothers' Blessing */}
       <Section id="blessing" title="Tribal Grandmothers' Water Blessing" subtitle="Sacred waters for healing, recovery, and protection">
         <div className="card bg-[#0a021d]/60 border border-emerald-500/30">
           <div className="card-body grid md:grid-cols-3 gap-6 items-center">
@@ -705,331 +839,9 @@ export default function EventPage() {
         </div>
       </Section>
 
-      {/* Hurricane Melissa Relief Section */}
-      <Section id="hurricane-relief" title="Hurricane Melissa Relief" subtitle="Category 5 storm hits Jamaica - 185+ mph winds">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="card bg-[#0a021d]/60 border border-red-500/30">
-            <div className="card-body">
-              <h3 className="card-title text-red-200 mb-4">
-                <Zap className="w-5 h-5" /> Hurricane Melissa Impact
-              </h3>
-              <div className="space-y-3 text-white/90">
-                <p><strong>Category:</strong> 5 (Highest level)</p>
-                <p><strong>Wind Speed:</strong> 185+ mph sustained</p>
-                <p><strong>Location:</strong> Jamaica landfall</p>
-                <p><strong>Record:</strong> Largest Caribbean Atlantic storm ever</p>
-                <p><strong>Status:</strong> Immediate relief needed</p>
-              </div>
-              <div className="mt-4 p-3 bg-red-500/20 rounded-lg border border-red-400/30">
-                <p className="text-red-200 text-sm">
-                  Hurricane Melissa represents the most powerful storm to ever make landfall in the Caribbean Atlantic region, requiring unprecedented relief efforts.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="card bg-[#0a021d]/60 border border-emerald-500/30">
-            <div className="card-body">
-              <h3 className="card-title text-emerald-200 mb-4">
-                <Heart className="w-5 h-5" /> Our Response
-              </h3>
-              <div className="space-y-3 text-white/90">
-                <p><strong>Direct Funding:</strong> 50% to verified orgs until end of year</p>
-                <p><strong>Reef Building:</strong> Resilient coastal protection</p>
-                <p><strong>Community Support:</strong> Immediate and long-term aid</p>
-                <p><strong>Transparency:</strong> Real-time fund tracking</p>
-                <p><strong>Accountability:</strong> Impact reporting from recipients</p>
-              </div>
-              <div className="mt-4 p-3 bg-emerald-500/20 rounded-lg border border-emerald-400/30">
-                <p className="text-emerald-200 text-sm">
-                  Seed 2 Sea facilitates coordination of funds raised via CurrentSeas coins like $💧, documenting impact with tech and marketing support.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Section>
-
       {/* Jamaica Relief Network */}
-      <Section id="jamaica-relief" title="Jamaica Relief Network" subtitle="Community-driven relief with instant $💧 token claiming">
+      <Section id="jamaica-relief" title="Jamaica Relief Network" subtitle="Community-driven relief with verified organizations">
         <JamaicaReliefNetwork />
-      </Section>
-
-
-      {/* Tokenomics & Staking */}
-      <Section id="tokenomics" title="$💧 Tokenomics & Staking" subtitle="Transparent impact routing with community-powered relief">
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="card bg-[#0b0220]/70 border border-emerald-500/30">
-            <div className="card-body">
-              <h3 className="card-title text-emerald-200">Hurricane Relief (Until End of Year)</h3>
-              <div className="text-3xl font-bold text-emerald-200 mb-2">50%</div>
-              <p className="text-white/80">Direct funding to verified Jamaica relief organizations via Seed 2 Sea coordination.</p>
-              <div className="mt-3 text-sm text-emerald-300">
-                • Emergency relief: 30%<br/>
-                • Infrastructure rebuilding: 20%
-              </div>
-            </div>
-          </div>
-          <div className="card bg-[#0b0220]/70 border border-cyan-500/30">
-            <div className="card-body">
-              <h3 className="card-title text-cyan-200">$💧 Staking Pools</h3>
-              <div className="text-3xl font-bold text-cyan-200 mb-2">30%</div>
-              <p className="text-white/80">Community staking pools directed to verified organizations with transparent impact tracking.</p>
-              <div className="mt-3 text-sm text-cyan-300">
-                • Staking rewards to orgs: 20%<br/>
-                • Unstake donations: 10%
-              </div>
-            </div>
-          </div>
-          <div className="card bg-[#0b0220]/70 border border-fuchsia-500/30">
-            <div className="card-body">
-              <h3 className="card-title text-fuchsia-200">Operations & Future Relief</h3>
-              <div className="text-3xl font-bold text-fuchsia-200 mb-2">20%</div>
-              <p className="text-white/80">Platform operations, future disaster relief efforts, and continued community support.</p>
-              <div className="mt-3 text-sm text-fuchsia-300">
-                • Platform ops: 10%<br/>
-                • Future relief: 10%
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-8 card bg-[#0b0220]/70 border border-emerald-400/30">
-          <div className="card-body">
-            <h3 className="card-title text-emerald-200">
-              <Coins className="w-5 h-5" /> Seed 2 Sea Coordination
-            </h3>
-            <p className="text-white/90 text-lg leading-relaxed mb-4">
-              Seed 2 Sea facilitates the coordination of funds raised via our CurrentSeas coins like the $💧, and documents impact with tech and marketing support.
-            </p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[#0a021d]/50 rounded-lg border border-emerald-400/20">
-                <h4 className="text-emerald-200 font-semibold mb-2">Fund Coordination</h4>
-                <ul className="text-white/80 text-sm space-y-1">
-                  <li>• Direct routing to verified orgs</li>
-                  <li>• Transparent blockchain tracking</li>
-                  <li>• Impact documentation</li>
-                  <li>• Community reporting</li>
-                </ul>
-              </div>
-              <div className="p-4 bg-[#0a021d]/50 rounded-lg border border-emerald-400/20">
-                <h4 className="text-emerald-200 font-semibold mb-2">Proof of Impact</h4>
-                <ul className="text-white/80 text-sm space-y-1">
-                  <li>• Real-time fund deployment</li>
-                  <li>• Verified organization reports</li>
-                  <li>• Community contribution tracking</li>
-                  <li>• Long-term recovery metrics</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-400/30 rounded-full">
-            <Heart className="w-4 h-4 text-emerald-200" />
-            <span className="text-emerald-200 font-semibold">50% of donations go directly to Jamaica relief until end of year</span>
-          </div>
-        </div>
-      </Section>
-      
-      {/* $💧 Staking Pools */}
-      <Section id="staking-pools" title="$💧 Staking Pools" subtitle="Community-powered relief with transparent impact">
-        <div className="space-y-8">
-          <div className="text-center mb-8">
-            <p className="text-white/90 text-lg max-w-3xl mx-auto">
-              Stake your $💧 tokens to support verified organizations. Your staking rewards go directly to the organization you choose, and when you unstake, you can direct all or a portion of your staked amount to the organization as well.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Jamaica Disaster Relief Foundation",
-                focus: "Emergency Shelter & Food",
-                status: "verified",
-                wallet: "JD1...xyz",
-                impact: "2,500 families served",
-                poolAmount: 125000,
-                stakers: 342
-              },
-              {
-                name: "Caribbean Climate Resilience Initiative",
-                focus: "Infrastructure Rebuilding",
-                status: "verified", 
-                wallet: "CC2...abc",
-                impact: "15 communities restored",
-                poolAmount: 98000,
-                stakers: 287
-              },
-              {
-                name: "Jamaica Healthcare Collective",
-                focus: "Medical Aid & Supplies",
-                status: "verified",
-                wallet: "JH3...def",
-                impact: "8 clinics supported",
-                poolAmount: 87000,
-                stakers: 195
-              }
-            ].map((org, index) => (
-              <div key={index} className="card bg-[#0b0220]/70 border border-white/10 hover:border-emerald-400/40">
-                <div className="card-body">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="card-title text-emerald-200 text-lg">{org.name}</h4>
-                    <div className="badge badge-success badge-sm">✓ Verified</div>
-                  </div>
-                  <p className="text-white/80 mb-2">{org.focus}</p>
-                  <p className="text-sm text-emerald-300 mb-3">{org.impact}</p>
-                  
-                  <div className="stats stats-vertical bg-[#0a021d]/50 shadow mb-4">
-                    <div className="stat">
-                      <div className="stat-title text-cyan-200">Pool Amount</div>
-                      <div className="stat-value text-2xl text-cyan-200">{org.poolAmount.toLocaleString()} $💧</div>
-                    </div>
-                    <div className="stat">
-                      <div className="stat-title text-fuchsia-200">Stakers</div>
-                      <div className="stat-value text-2xl text-fuchsia-200">{org.stakers}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/60">Wallet: {org.wallet}</span>
-                    <button className="btn btn-primary btn-sm">
-                      <Coins className="w-3 h-3 mr-1" /> Stake to Support
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-8 card bg-[#0a021d]/60 border border-cyan-400/30">
-            <div className="card-body">
-              <h3 className="card-title text-cyan-200 mb-4">
-                <Star className="w-5 h-5" /> How It Works
-              </h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="p-4 bg-[#0b0220]/70 rounded-lg border border-cyan-400/20">
-                  <h4 className="text-cyan-200 font-semibold mb-2">1. Stake $💧</h4>
-                  <p className="text-white/80 text-sm">Choose an organization and stake your $💧 tokens to their pool.</p>
-                </div>
-                <div className="p-4 bg-[#0b0220]/70 rounded-lg border border-cyan-400/20">
-                  <h4 className="text-cyan-200 font-semibold mb-2">2. Earn Rewards</h4>
-                  <p className="text-white/80 text-sm">Your staking rewards automatically go to the organization you staked for.</p>
-                </div>
-                <div className="p-4 bg-[#0b0220]/70 rounded-lg border border-cyan-400/20">
-                  <h4 className="text-cyan-200 font-semibold mb-2">3. Direct Impact</h4>
-                  <p className="text-white/80 text-sm">When you unstake, choose how much of your staked amount goes to the organization.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Section>
-      
-      {/* Proof of Impact */}
-      <Section id="proof-of-impact" title="Proof of Impact" subtitle="Transparent tracking of community-powered relief">
-        <div className="space-y-8">
-          <div className="text-center mb-8">
-            <p className="text-white/90 text-lg max-w-3xl mx-auto">
-              Track the real and verifiable impact of your contributions. See how funds are deployed, what organizations are accomplishing, and how the community is making a difference.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="card bg-[#0b0220]/70 border border-emerald-500/30">
-              <div className="card-body">
-                <h3 className="card-title text-emerald-200 mb-4">
-                  <Globe className="w-5 h-5" /> Fund Deployment
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-white/80">Emergency Relief</span>
-                      <span className="text-emerald-200">$125,000 (42%)</span>
-                    </div>
-                    <progress className="progress progress-emerald-500" value="42" max="100"></progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-white/80">Infrastructure</span>
-                      <span className="text-emerald-200">$87,500 (29%)</span>
-                    </div>
-                    <progress className="progress progress-emerald-500" value="29" max="100"></progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-white/80">Healthcare</span>
-                      <span className="text-emerald-200">$62,500 (21%)</span>
-                    </div>
-                    <progress className="progress progress-emerald-500" value="21" max="100"></progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-white/80">Long-term Recovery</span>
-                      <span className="text-emerald-200">$25,000 (8%)</span>
-                    </div>
-                    <progress className="progress progress-emerald-500" value="8" max="100"></progress>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="card bg-[#0b0220]/70 border border-cyan-500/30">
-              <div className="card-body">
-                <h3 className="card-title text-cyan-200 mb-4">
-                  <Users className="w-5 h-5" /> Community Contributors
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="avatar placeholder">
-                      <div className="bg-cyan-500 text-neutral-content rounded-full w-12">
-                        <span className="text-xl">JD</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-white">Jamaica Diaspora</div>
-                      <div className="text-sm text-cyan-200">Donated time, prayers, and $5,000</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="avatar placeholder">
-                      <div className="bg-cyan-500 text-neutral-content rounded-full w-12">
-                        <span className="text-xl">CF</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-white">Climate Funders</div>
-                      <div className="text-sm text-cyan-200">Staked 50,000 $💧 tokens</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="avatar placeholder">
-                      <div className="bg-cyan-500 text-neutral-content rounded-full w-12">
-                        <span className="text-xl">RG</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-white">Reef Guardians</div>
-                      <div className="text-sm text-cyan-200">Volunteered 500 hours</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="avatar placeholder">
-                      <div className="bg-cyan-500 text-neutral-content rounded-full w-12">
-                        <span className="text-xl">OC</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold text-white">Ocean Conservationists</div>
-                      <div className="text-sm text-cyan-200">Donated 10,000 $💧 tokens</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </Section>
 
       {/* Schedule */}
@@ -1052,44 +864,6 @@ export default function EventPage() {
         </div>
       </Section>
 
-      {/* FAQ */}
-      <Section id="faq" title="FAQ & Policies" subtitle="Understanding our relief and blessing mission">
-        <div className="join join-vertical w-full">
-          {[
-            { 
-              q: "How does Hurricane Melissa relief work?", 
-              a: "50% of donations go directly to verified Jamaica relief organizations until the end of the year. The remaining funds support staking pools where community members can direct their rewards and unstaked amounts to specific organizations for transparent impact tracking." 
-            },
-            { 
-              q: "What about the Tribal Grandmothers' blessing?", 
-              a: "The blessing ceremony connects spiritual intention with practical relief. Each blessing funds verified relief efforts through Seed 2 Sea coordination, creating a bridge between ancestral wisdom and modern community support." 
-            },
-            { 
-              q: "How do the $💧 staking pools work?", 
-              a: "Users can stake their $💧 tokens to pools associated with verified organizations. Staking rewards automatically go to the organization, and when unstaking, users can choose to donate all or a portion of their staked amount to the organization as well." 
-            },
-            { 
-              q: "Is the reef building connected to relief?", 
-              a: "Yes. While we provide immediate relief, we're also investing in long-term resilience through the #100Reefs challenge, building natural storm protection for future disasters. A portion of funds is directed to reef building projects." 
-            },
-            { 
-              q: "Can I suggest organizations for verification?", 
-              a: "Absolutely! Use our community submission form to suggest organizations. Community voting helps prioritize verification, and we review all submissions within 24 hours through our partnership with Seed 2 Sea." 
-            },
-          ].map((f, index) => (
-            <div key={f.q} className="collapse collapse-arrow join-item bg-[#09021a]/70 border border-white/10">
-              <input type="checkbox" id={`faq-${index}`} />
-              <label htmlFor={`faq-${index}`} className="collapse-title text-base sm:text-lg font-semibold text-white cursor-pointer">
-                {f.q}
-              </label>
-              <div className="collapse-content text-white/80">
-                <p>{f.a}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
       {/* Footer */}
       <footer className="border-t border-white/10 py-10">
         <div className="max-w-6xl mx-auto px-4 grid sm:grid-cols-2 gap-6">
@@ -1103,6 +877,7 @@ export default function EventPage() {
               <Pill>Sacred Blessings</Pill>
               <Pill>Reef Resilience</Pill>
               <Pill>Community Driven</Pill>
+              <Pill>API-Driven</Pill>
             </div>
           </div>
           <div className="sm:justify-self-end">
