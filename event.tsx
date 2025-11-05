@@ -272,13 +272,12 @@ function JamaicaReliefNetwork() {
 // ---------- Timeline data ----------
 const schedule = [
   { t: "12:00", label: "Doors open • Neon check-in & wallet desk", icon: PartyPopper },
+  { t: "12:15", label: "Opening ceremony & prayer", icon: Moon },
   { t: "12:30", label: "Learn‑2‑Earn AR Reef Hunt goes live", icon: RadioReceiver },
   { t: "1:00", label: "Pick'em Lounge (Free‑to‑Play) opens", icon: Trophy },
   { t: "2:00", label: "Structured‑Water tastings & vendor village", icon: Droplets },
-  { t: "3:00", label: "Rooftop yoga & sound‑healing pulses (hourly)", icon: Waves },
-  { t: "5:30–6:00", label: "Grandmothers' Water Blessing → First Reef Bloom", icon: Moon },
-  { t: "7:00", label: "Raffle & Guardians of the Reef staking push", icon: Gift },
-  { t: "9:36", label: "Moon‑Lock ceremony (on‑chain visual)", icon: Moon },
+  { t: "3:00", label: "Raffle & Guardians of the Reef staking push", icon: Gift },
+  { t: "5:00-6:00", label: "Grandmothers' Water Blessing → First Reef Bloom", icon: Moon },
 ];
 
 // ---------- Main Page ----------
@@ -671,7 +670,7 @@ export default function EventPage() {
                 This ceremony connects the spiritual power of blessed waters with practical relief efforts, creating a bridge between ancestral wisdom and contemporary community support.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Pill>5:30–6:00 pm</Pill>
+                <Pill>6:00 pm</Pill>
                 <Pill>Poolside • DAER</Pill>
                 <Pill>Sacred Waters</Pill>
                 <Pill>Jamaica Recovery</Pill>
