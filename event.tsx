@@ -865,6 +865,22 @@ export default function EventPage() {
         </div>
       </Section>
 
+      {/* Parking Information */}
+      <Section id="parking" title="Parking Information" subtitle="Directions to ensure smooth arrival">
+        <div className="card bg-[#0a021d]/60 border border-cyan-400/30">
+          <div className="card-body">
+            <div className="flex items-start gap-4">
+              <MapPin className="w-6 h-6 text-cyan-400 mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">Venue Address</h3>
+                <p className="text-white/90 mb-4">1 Seminole Way, Davie, FL 33314</p>
+                <p className="text-white/90">Please park in the Lucky St parking <strong>(NOT the Seminole Lot)</strong>. Signs will be provided throughout the venue to guide you to Salon G & East.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       {/* Footer */}
       <footer className="border-t border-white/10 py-10">
         <div className="max-w-6xl mx-auto px-4 grid sm:grid-cols-2 gap-6">

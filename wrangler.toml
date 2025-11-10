@@ -1,9 +1,11 @@
 name = "waterdrop-event"
 compatibility_date = "2024-08-01"
 pages_build_output_dir = "dist"
+account_id = "2d571f0977b553c7565fb74ee54db998"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "waterdrop-db"
-database_id = "c476e613-fde7-44c4-9d21-4a0e3232e0b9" # Replace with actual database ID after creation
-migrations_dir = "."
+# D1 database configuration commented out for testing
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "waterdrop-db"
+# database_id = "c476e613-fde7-44c4-9d21-4a0e3232e0b9" 
+# migrations_dir = "."
